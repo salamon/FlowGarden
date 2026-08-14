@@ -33,6 +33,8 @@ class FlowGarden:
         glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
         glfw.window_hint(glfw.DOUBLEBUFFER, glfw.TRUE)
+        glfw.window_hint(glfw.AUTO_ICONIFY, glfw.FALSE)
+        glfw.window_hint(glfw.FLOATING, glfw.FALSE)
         if hidden:
             glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
 

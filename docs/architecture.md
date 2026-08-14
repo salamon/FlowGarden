@@ -46,6 +46,8 @@ The state exists only in GPU memory for the lifetime of the process.
 
 Re-seeding creates a new procedural starting arrangement and clears the velocity and pressure fields. Palette changes affect only the final color mapping, so they can be made without interrupting the current motion.
 
+Fullscreen uses the selected monitor's current video mode with GLFW auto-iconification disabled. This keeps the composition fullscreen on a secondary monitor when another application receives focus on the primary monitor. The window is not floating or always-on-top.
+
 ## Why this is not a physics simulation
 
 FlowGarden borrows numerical ideas associated with incompressible flow, but it deliberately omits the model, calibration, and validation required for physical interpretation:

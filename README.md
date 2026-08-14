@@ -18,7 +18,7 @@ FlowGarden is preparing its first public source release. Windows is the currentl
 - Real-time GPU rendering with Python, ModernGL, GLFW, and GLSL.
 - Autonomous motion and a paused zen-garden interaction mode.
 - Four stylized, immiscible-looking pigment fields with five color palettes.
-- Fullscreen support on the monitor containing the window.
+- Multi-monitor fullscreen that stays active when another monitor receives focus.
 - A deliberately small codebase designed to be read, modified, and forked.
 - Fully offline execution with no data collection.
 
@@ -76,7 +76,7 @@ python -m flowgarden --scale 0.4
 | `R` | Re-seed and restart the composition |
 | `P` | Cycle to the next color palette |
 | `1`–`5` | Select Garden, Tidepool, Ember, Sakura, or Mineral directly |
-| `F11` | Toggle fullscreen on the current monitor |
+| `F11` | Toggle fullscreen on the current monitor without auto-minimizing on focus loss |
 | `Esc` | Quit |
 
 ## Color palettes
