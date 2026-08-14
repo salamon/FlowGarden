@@ -1,8 +1,8 @@
-#version 430 core
+#version 410 core
 
 in vec2 v_uv;
 layout(location = 0) out float out_divergence;
-layout(binding = 0) uniform sampler2D u_velocity;
+uniform sampler2D u_velocity;
 
 void main() {
     vec2 texel = 1.0 / vec2(textureSize(u_velocity, 0));

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import argparse
 import math
+import random
 import secrets
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import glfw
@@ -12,6 +14,17 @@ import moderngl
 
 SHADER_DIR = Path(__file__).with_name("shaders")
 PALETTE_NAMES = ("Garden", "Tidepool", "Ember", "Sakura", "Mineral")
+MAX_ROCKS = 8
+
+
+@dataclass
+class Rock:
+    x: float
+    y: float
+    radius_x: float
+    radius_y: float
+    angle: float
+    shape: float
 
 
 class FlowGarden:
@@ -30,8 +43,9 @@ class FlowGarden:
             raise RuntimeError("GLFW could not initialize")
 
         glfw.window_hint(glfw.CONTEXT_VERSION_MAJOR, 4)
-        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 3)
+        glfw.window_hint(glfw.CONTEXT_VERSION_MINOR, 1)
         glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
+        glfw.window_hint(glfw.OPENGL_FORWARD_COMPAT, glfw.TRUE)
         glfw.window_hint(glfw.DOUBLEBUFFER, glfw.TRUE)
         glfw.window_hint(glfw.AUTO_ICONIFY, glfw.FALSE)
         glfw.window_hint(glfw.FLOATING, glfw.FALSE)
@@ -54,13 +68,13 @@ class FlowGarden:
         self.window = glfw.create_window(width, height, "FlowGarden", target_monitor, None)
         if not self.window:
             glfw.terminate()
-            raise RuntimeError("An OpenGL 4.3 context could not be created")
+            raise RuntimeError("An OpenGL 4.1 context could not be created")
 
         glfw.make_context_current(self.window)
         if windowed and not hidden:
             glfw.set_window_pos(self.window, max(40, (mode.size.width - width) // 2), max(40, (mode.size.height - height) // 2))
         glfw.swap_interval(1)
-        self.ctx = moderngl.create_context(require=430)
+        self.ctx = moderngl.create_context(require=410)
         self.ctx.disable(moderngl.DEPTH_TEST)
         self.ctx.disable(moderngl.BLEND)
 
@@ -73,6 +87,10 @@ class FlowGarden:
         self.left_down = False
         self.right_down = False
         self.seed = self._new_seed()
+        self.rocks: list[Rock] = []
+        self._rng = random.Random(secrets.randbits(64))
+        self._dragged_rock: int | None = None
+        self._rock_drag_offset = (0.0, 0.0)
         self._last_cursor: tuple[float, float] | None = None
         self._windowed_rect = (100, 100, min(1280, width), min(720, height))
         self._is_fullscreen = not windowed
@@ -111,6 +129,17 @@ class FlowGarden:
             name: self.ctx.program(vertex_shader=vertex, fragment_shader=self._shader(filename))
             for name, filename in fragment_names.items()
         }
+        texture_uniforms = {
+            "velocity": ("u_velocity",),
+            "divergence": ("u_velocity",),
+            "pressure": ("u_pressure", "u_divergence"),
+            "project": ("u_velocity", "u_pressure"),
+            "pigment": ("u_pigment", "u_velocity"),
+            "render": ("u_pigment", "u_velocity"),
+        }
+        for name, uniform_names in texture_uniforms.items():
+            for unit, uniform_name in enumerate(uniform_names):
+                self.programs[name][uniform_name].value = unit
         self.vaos = {name: self.ctx.vertex_array(program, []) for name, program in self.programs.items()}
 
     def _texture(self, components: int, dtype: str = "f2") -> moderngl.Texture:
@@ -154,13 +183,23 @@ class FlowGarden:
             self._reseed()
         elif key == glfw.KEY_P:
             self._set_palette(self.palette_index + 1)
+        elif key == glfw.KEY_S:
+            if _mods & glfw.MOD_SHIFT:
+                self._clear_rocks()
+            else:
+                self._add_random_rock()
         elif glfw.KEY_1 <= key <= glfw.KEY_5:
             self._set_palette(key - glfw.KEY_1)
         elif key == glfw.KEY_F11:
             self._toggle_fullscreen()
 
     def _update_window_title(self) -> None:
-        glfw.set_window_title(self.window, f"FlowGarden - {PALETTE_NAMES[self.palette_index]}")
+        rock_count = len(self.rocks)
+        rock_suffix = "" if rock_count == 0 else f" - {rock_count} {'rock' if rock_count == 1 else 'rocks'}"
+        glfw.set_window_title(
+            self.window,
+            f"FlowGarden - {PALETTE_NAMES[self.palette_index]}{rock_suffix}",
+        )
 
     def _set_palette(self, palette: int) -> None:
         self.palette_index = palette % len(PALETTE_NAMES)
@@ -171,11 +210,79 @@ class FlowGarden:
         self._clear_motion()
         self._reset_pigment()
 
+    def _add_random_rock(self) -> None:
+        if len(self.rocks) >= MAX_ROCKS:
+            return
+
+        aspect = self.sim_size[0] / self.sim_size[1]
+        for _ in range(32):
+            radius_y = self._rng.uniform(0.045, 0.085)
+            radius_x = radius_y * self._rng.uniform(0.78, 1.42)
+            margin_x = radius_x / aspect + 0.025
+            margin_y = radius_y + 0.025
+            candidate = Rock(
+                x=self._rng.uniform(margin_x, 1.0 - margin_x),
+                y=self._rng.uniform(margin_y, 1.0 - margin_y),
+                radius_x=radius_x,
+                radius_y=radius_y,
+                angle=self._rng.uniform(-math.pi, math.pi),
+                shape=self._rng.random(),
+            )
+            if all(
+                math.hypot((candidate.x - rock.x) * aspect, candidate.y - rock.y)
+                > max(candidate.radius_x, candidate.radius_y)
+                + max(rock.radius_x, rock.radius_y)
+                + 0.035
+                for rock in self.rocks
+            ):
+                self.rocks.append(candidate)
+                self._update_window_title()
+                return
+
+    def _clear_rocks(self) -> None:
+        self.rocks.clear()
+        self._dragged_rock = None
+        self._update_window_title()
+
+    def _rock_at(self, position: tuple[float, float]) -> int | None:
+        aspect = self.sim_size[0] / self.sim_size[1]
+        for index in range(len(self.rocks) - 1, -1, -1):
+            rock = self.rocks[index]
+            dx = (position[0] - rock.x) * aspect
+            dy = position[1] - rock.y
+            cosine = math.cos(rock.angle)
+            sine = math.sin(rock.angle)
+            local_x = cosine * dx + sine * dy
+            local_y = -sine * dx + cosine * dy
+            if (local_x / rock.radius_x) ** 2 + (local_y / rock.radius_y) ** 2 <= 1.3:
+                return index
+        return None
+
+    def _rock_uniforms(self) -> dict[str, object]:
+        rocks = [(rock.x, rock.y, rock.radius_x, rock.radius_y) for rock in self.rocks]
+        metadata = [(rock.angle, rock.shape) for rock in self.rocks]
+        rocks.extend([(0.0, 0.0, 0.01, 0.01)] * (MAX_ROCKS - len(rocks)))
+        metadata.extend([(0.0, 0.0)] * (MAX_ROCKS - len(metadata)))
+        return {
+            "u_rock_count": len(self.rocks),
+            "u_rocks": tuple(rocks),
+            "u_rock_meta": tuple(metadata),
+        }
+
     def _on_cursor(self, _window, x: float, y: float) -> None:
         width, height = glfw.get_window_size(self.window)
         if width <= 0 or height <= 0:
             return
         current = (x / width, 1.0 - y / height)
+        if self._dragged_rock is not None:
+            rock = self.rocks[self._dragged_rock]
+            aspect = self.sim_size[0] / self.sim_size[1]
+            margin_x = rock.radius_x / aspect
+            rock.x = max(margin_x, min(1.0 - margin_x, current[0] + self._rock_drag_offset[0]))
+            rock.y = max(rock.radius_y, min(1.0 - rock.radius_y, current[1] + self._rock_drag_offset[1]))
+            self.mouse_uv = current
+            self._last_cursor = current
+            return
         if self._last_cursor is not None and (self.left_down or self.right_down):
             self.mouse_delta[0] += current[0] - self._last_cursor[0]
             self.mouse_delta[1] += current[1] - self._last_cursor[1]
@@ -183,12 +290,24 @@ class FlowGarden:
         self._last_cursor = current
 
     def _on_button(self, _window, button: int, action: int, _mods: int) -> None:
-        down = action != glfw.RELEASE
         if button == glfw.MOUSE_BUTTON_LEFT:
-            self.left_down = down
+            if action == glfw.PRESS:
+                x, y = glfw.get_cursor_pos(self.window)
+                self._on_cursor(self.window, x, y)
+                rock_index = self._rock_at(self.mouse_uv)
+                if rock_index is None:
+                    self.left_down = True
+                else:
+                    rock = self.rocks[rock_index]
+                    self._dragged_rock = rock_index
+                    self._rock_drag_offset = (rock.x - self.mouse_uv[0], rock.y - self.mouse_uv[1])
+                    self.left_down = False
+            elif action == glfw.RELEASE:
+                self.left_down = False
+                self._dragged_rock = None
         elif button == glfw.MOUSE_BUTTON_RIGHT:
-            self.right_down = down
-        if down:
+            self.right_down = action != glfw.RELEASE
+        if action == glfw.PRESS and button != glfw.MOUSE_BUTTON_LEFT:
             x, y = glfw.get_cursor_pos(self.window)
             self._on_cursor(self.window, x, y)
 
@@ -286,6 +405,7 @@ class FlowGarden:
 
     def _simulate(self, dt: float, elapsed: float) -> None:
         mouse_kind = 1 if self.left_down else (-1 if self.right_down else 0)
+        rock_uniforms = self._rock_uniforms()
         common = {
             "u_dt": dt,
             "u_time": elapsed,
@@ -296,6 +416,7 @@ class FlowGarden:
             "u_mouse_kind": mouse_kind,
             "u_brush": self.brush_radius,
             "u_seed": self.seed,
+            **rock_uniforms,
         }
 
         self._draw("velocity", self.velocity_fbo[1], (self.velocity[0],), common)
@@ -308,7 +429,12 @@ class FlowGarden:
             self._draw("pressure", self.pressure_fbo[1], (self.pressure[0], self.divergence))
             self._swap(self.pressure, self.pressure_fbo)
 
-        self._draw("project", self.velocity_fbo[1], (self.velocity[0], self.pressure[0]))
+        self._draw(
+            "project",
+            self.velocity_fbo[1],
+            (self.velocity[0], self.pressure[0]),
+            {"u_aspect": common["u_aspect"], **rock_uniforms},
+        )
         self._swap(self.velocity, self.velocity_fbo)
 
         self._draw("pigment", self.pigment_fbo[1], (self.pigment[0], self.velocity[0]), common)
@@ -316,19 +442,19 @@ class FlowGarden:
         self.mouse_delta[:] = (0.0, 0.0)
 
     def _render(self, elapsed: float, target: moderngl.Framebuffer | None = None) -> None:
-        width, height = target.size if target is not None else glfw.get_framebuffer_size(self.window)
         self._draw(
             "render",
             target,
             (self.pigment[0], self.velocity[0]),
             {
                 "u_time": elapsed,
-                "u_aspect": width / max(1, height),
+                "u_aspect": self.sim_size[0] / self.sim_size[1],
                 "u_auto": int(self.auto_mode),
                 "u_mouse": self.mouse_uv,
                 "u_brush": self.brush_radius,
                 "u_mouse_kind": int(self.left_down or self.right_down),
                 "u_palette": self.palette_index,
+                **self._rock_uniforms(),
             },
         )
 
@@ -358,6 +484,7 @@ class FlowGarden:
                 if frame_limit is not None and frame >= frame_limit:
                     break
                 if frame_limit is not None and frame == 1:
+                    self._add_random_rock()
                     self.auto_mode = False
                     self._clear_motion()
                     self.left_down = True

@@ -25,12 +25,12 @@ Velocity, pigment, and pressure use ping-pong texture pairs so each pass reads t
 
 Each displayed frame runs the following passes:
 
-1. **Velocity update**: semi-Lagrangian backtracing transports the current velocity. A small neighbor blend adds smoothness. Autonomous mode adds a procedural flow field; mouse interaction adds directional or rotational impulses.
+1. **Velocity update**: semi-Lagrangian backtracing transports the current velocity. A small neighbor blend adds smoothness. Autonomous mode adds a procedural flow field; mouse interaction adds directional or rotational impulses. Inward velocity near a rock is redirected and velocity inside it is cleared.
 2. **Divergence estimate**: centered texture samples estimate the divergence of the velocity field.
 3. **Pressure relaxation**: a configurable number of Jacobi-like iterations produces a pressure field.
-4. **Velocity projection**: the pressure gradient is subtracted from velocity to reduce visible divergence.
-5. **Pigment transport**: the four pigment weights are backtraced through the velocity field and sharpened to preserve distinct color regions.
-6. **Artistic rendering**: pigment weights are mapped to one of five selectable palettes and combined with boundary shading, procedural grain, rake-like contours, velocity highlights, and a vignette.
+4. **Velocity projection**: the pressure gradient is subtracted from velocity to reduce visible divergence, then rock constraints are applied again so projection cannot reintroduce motion inside an obstacle.
+5. **Pigment transport**: the four pigment weights are backtraced through the velocity field and sharpened to preserve distinct color regions. Backtraces that land inside a rock are rejected.
+6. **Artistic rendering**: pigment weights are mapped to one of five selectable palettes and combined with boundary shading, procedural grain, rake-like contours, velocity highlights, a vignette, and shaded rocks.
 
 The render passes are ordered by `flowgarden/app.py`; individual equations and style decisions live in `flowgarden/shaders/`.
 
@@ -48,6 +48,14 @@ Re-seeding creates a new procedural starting arrangement and clears the velocity
 
 Fullscreen uses the selected monitor's current video mode with GLFW auto-iconification disabled. This keeps the composition fullscreen on a secondary monitor when another application receives focus on the primary monitor. The window is not floating or always-on-top.
 
+## Rocks and obstacle response
+
+Up to eight rocks are stored as a small CPU-side list and sent to the relevant shaders as uniform arrays. Each rock is a rotated ellipse with a procedural boundary perturbation, producing varied positions, sizes, orientations, and silhouettes without meshes or asset files.
+
+The velocity and projection passes clear motion inside a rock and reflect the inward component within a narrow boundary band. Pigment advection rejects samples whose backtraced position falls inside a rock. The render pass draws a compact shaded stone and shadow from the same implicit shape, so interaction, collision, and appearance remain aligned.
+
+Left-dragging performs a CPU-side hit test against the ellipse and updates its center. When no rock is hit, the same gesture continues to comb the pigment fields. This deliberately avoids a separate editing mode or tool system.
+
 ## Why this is not a physics simulation
 
 FlowGarden borrows numerical ideas associated with incompressible flow, but it deliberately omits the model, calibration, and validation required for physical interpretation:
@@ -57,6 +65,7 @@ FlowGarden borrows numerical ideas associated with incompressible flow, but it d
 - The smoothing term is not a calibrated viscosity model.
 - Pressure iterations use a small fixed budget selected for real-time appearance.
 - Boundary handling is a visual damping rule rather than a validated material boundary condition.
+- Rock collisions are stylized local constraints, not a validated solid-fluid coupling method.
 - Pigment sharpening is a stylistic operation and does not model chemistry, diffusion, surface tension, or multiphase flow.
 - The implementation makes no conservation, convergence, or accuracy guarantees.
 

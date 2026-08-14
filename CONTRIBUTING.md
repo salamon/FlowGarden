@@ -17,7 +17,7 @@ FlowGarden does not maintain a runtime plugin API. Experimental features and alt
 
 ## Development setup
 
-Python 3.12 and a GPU supporting OpenGL 4.3 or newer are recommended.
+Python 3.12 and a GPU supporting OpenGL 4.1 or newer are recommended. Windows is the currently verified development platform; Linux and macOS contributions should describe the tested OS, hardware, and driver.
 
 ```powershell
 py -3.12 -m venv .venv

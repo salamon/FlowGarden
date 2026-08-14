@@ -1,9 +1,9 @@
-#version 430 core
+#version 410 core
 
 in vec2 v_uv;
 layout(location = 0) out vec4 out_color;
-layout(binding = 0) uniform sampler2D u_pigment;
-layout(binding = 1) uniform sampler2D u_velocity;
+uniform sampler2D u_pigment;
+uniform sampler2D u_velocity;
 
 uniform float u_time;
 uniform float u_aspect;
@@ -12,6 +12,29 @@ uniform vec2 u_mouse;
 uniform float u_brush;
 uniform int u_mouse_kind;
 uniform int u_palette;
+
+const int MAX_ROCKS = 8;
+uniform int u_rock_count;
+uniform vec4 u_rocks[MAX_ROCKS];
+uniform vec2 u_rock_meta[MAX_ROCKS];
+
+vec2 rotate_point(vec2 point, float angle) {
+    float cosine = cos(angle);
+    float sine = sin(angle);
+    return vec2(cosine * point.x - sine * point.y, sine * point.x + cosine * point.y);
+}
+
+float rock_distance(vec2 uv, int index, out vec2 local) {
+    vec4 rock = u_rocks[index];
+    float angle = u_rock_meta[index].x;
+    float shape = u_rock_meta[index].y;
+    vec2 point = vec2((uv.x - rock.x) * u_aspect, uv.y - rock.y);
+    local = rotate_point(point, -angle);
+    float theta = atan(local.y, local.x);
+    float irregularity = 1.0 + 0.065 * sin(theta * 3.0 + shape * 6.2832)
+        + 0.035 * sin(theta * 5.0 - shape * 4.7124);
+    return length(local / (rock.zw * irregularity)) - 1.0;
+}
 
 mat4 color_palette(int palette) {
     if (palette == 1) {
@@ -94,6 +117,39 @@ void main() {
 
     float vignette = 1.0 - 0.28 * dot(v_uv - 0.5, v_uv - 0.5);
     color *= vignette;
+
+    float closest_rock = 1000.0;
+    float closest_shadow = 1000.0;
+    vec2 closest_local = vec2(0.0);
+    vec2 shadow_local;
+    int closest_index = 0;
+    for (int i = 0; i < u_rock_count; ++i) {
+        vec2 local;
+        float distance_to_rock = rock_distance(v_uv, i, local);
+        if (distance_to_rock < closest_rock) {
+            closest_rock = distance_to_rock;
+            closest_local = local;
+            closest_index = i;
+        }
+        float shadow_distance = rock_distance(v_uv - vec2(0.008 / u_aspect, -0.012), i, shadow_local);
+        closest_shadow = min(closest_shadow, shadow_distance);
+    }
+
+    float rock_mask = 1.0 - smoothstep(-0.015, 0.018, closest_rock);
+    float shadow_mask = (1.0 - smoothstep(-0.02, 0.22, closest_shadow)) * (1.0 - rock_mask);
+    color *= 1.0 - shadow_mask * 0.34;
+
+    if (rock_mask > 0.0) {
+        vec2 scaled = closest_local / u_rocks[closest_index].zw;
+        vec3 normal = normalize(vec3(-scaled.x * 0.55, scaled.y * 0.55, 1.0));
+        float lighting = 0.48 + 0.52 * max(0.0, dot(normal, normalize(vec3(-0.45, 0.65, 0.85))));
+        float stone_grain = hash21(gl_FragCoord.xy * 0.35 + u_rock_meta[closest_index].yy * 91.0) - 0.5;
+        float edge = 1.0 - smoothstep(0.0, 0.11, abs(closest_rock));
+        vec3 stone = mix(vec3(0.16, 0.17, 0.17), vec3(0.46, 0.48, 0.46), lighting);
+        stone += stone_grain * 0.055;
+        stone *= 1.0 - edge * 0.16;
+        color = mix(color, stone, rock_mask);
+    }
 
     if (u_auto == 0 && u_mouse_kind == 1) {
         vec2 d = v_uv - u_mouse;

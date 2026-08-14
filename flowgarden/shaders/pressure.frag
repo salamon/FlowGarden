@@ -1,9 +1,9 @@
-#version 430 core
+#version 410 core
 
 in vec2 v_uv;
 layout(location = 0) out float out_pressure;
-layout(binding = 0) uniform sampler2D u_pressure;
-layout(binding = 1) uniform sampler2D u_divergence;
+uniform sampler2D u_pressure;
+uniform sampler2D u_divergence;
 
 void main() {
     vec2 texel = 1.0 / vec2(textureSize(u_pressure, 0));
