@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "flowgarden"
 version = "0.1.0"
-description = "An offline, shader-driven fluid-art playground"
+description = "Offline shader art inspired by fluid motion and karesansui"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [
     { name = "Nestor Salamon" },
 ]
-keywords = ["computer-graphics", "generative-art", "glsl", "moderngl", "opengl"]
+keywords = ["computer-graphics", "creative-coding", "generative-art", "glsl", "karesansui", "moderngl", "offline", "opengl"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Win32 (MS Windows)",

@@ -110,7 +110,7 @@ Changing palettes remaps the current pigment fields without resetting their moti
 
 Python is responsible only for the window, input, GPU resources, and render-pass orchestration. Advection, procedural forcing, divergence, pressure relaxation, velocity projection, pigment-field transport, and final styling run in GLSL fragment shaders.
 
-The implementation favors responsive and aesthetically interesting motion over physical correctness. For pass-by-pass details and the model's limitations, read [Architecture and artistic model](docs/architecture.md).
+The implementation favors responsive and aesthetically interesting motion over physical correctness. For pass order, discrete equations, artistic approximations, and model limitations, read [Architecture and artistic model](docs/architecture.md).
 
 Rocks remain in place when the composition is re-seeded. Their obstacle response is intentionally stylized: it prevents flow through each shape and redirects inward motion, but does not claim physically accurate solid-fluid coupling.
 

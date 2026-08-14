@@ -5,5 +5,5 @@ dependencies:
   - python=3.12
   - pip
   - pip:
-      - moderngl>=5.10
-      - glfw>=2.7
+      - moderngl>=5.10,<6
+      - glfw>=2.7,<3

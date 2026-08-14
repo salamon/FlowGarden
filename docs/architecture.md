@@ -34,6 +34,104 @@ Each displayed frame runs the following passes:
 
 The render passes are ordered by `flowgarden/app.py`; individual equations and style decisions live in `flowgarden/shaders/`.
 
+## Numerical model and artistic approximations
+
+This section records the discrete operations implemented by the shaders. It is a description of the artwork's computation, not a derivation of a physical fluid model.
+
+Let $\mathbf{x}=(x,y)$ be normalized texture coordinates, $\mathbf{h}=(1/W,1/H)$ one texel, $\mathbf{u}$ the two-channel velocity field, $p$ pressure, $d$ divergence, and $\mathbf{c}$ the four pigment weights. Texture lookups are bilinearly filtered. The frame time step is clamped to
+
+$$
+1/240 \leq \Delta t \leq 1/30.
+$$
+
+### Velocity transport and forcing
+
+The velocity pass uses a semi-Lagrangian backtrace:
+
+$$
+\mathbf{x}_b = \operatorname{clamp}(\mathbf{x}-\Delta t\,\mathbf{u}^n(\mathbf{x}),\mathbf{h},1-\mathbf{h}),
+\qquad
+\widetilde{\mathbf{u}}=\mathbf{u}^n(\mathbf{x}_b).
+$$
+
+It then blends the transported value with its four axial neighbors. With $\alpha=\min(0.12,4\Delta t)$ and $\mathcal{N}$ denoting those samples,
+
+$$
+\mathbf{u}_a=(1-\alpha)\widetilde{\mathbf{u}}+\frac{\alpha}{4}\sum_{q\in\mathcal{N}}\mathbf{u}^n(q).
+$$
+
+Autonomous mode adds the analytic procedural field $\mathbf{f}(\mathbf{x},t)$ defined in [`velocity.frag`](../flowgarden/shaders/velocity.frag), then applies exponential damping:
+
+$$
+\mathbf{u}^{*}=(\mathbf{u}_a+0.055\,\Delta t\,\mathbf{f})e^{-0.34\Delta t}.
+$$
+
+Zen-garden mode injects no autonomous field and uses the stronger damping $\mathbf{u}^{*}=\mathbf{u}_a e^{-8\Delta t}$. Mouse impulses and rock constraints are applied afterward. Velocity is finally tapered near the canvas boundary and clamped component-wise to $[-1.2,1.2]$.
+
+### Divergence and pressure projection
+
+The divergence shader uses centered neighbor differences in grid-scaled coordinates:
+
+$$
+d_{i,j}=\frac{1}{2}\left[
+(u^x_{i+1,j}-u^x_{i-1,j})+
+(u^y_{i,j+1}-u^y_{i,j-1})
+\right].
+$$
+
+Pressure is reset to zero each frame. A small fixed-budget Jacobi-like relaxation, 14 iterations by default, applies
+
+$$
+p^{k+1}_{i,j}=\frac{1}{4}\left(
+p^k_{i-1,j}+p^k_{i+1,j}+p^k_{i,j-1}+p^k_{i,j+1}-d_{i,j}
+\right).
+$$
+
+The projection pass subtracts the corresponding centered pressure difference:
+
+$$
+\mathbf{u}^{n+1}_{i,j}=\mathbf{u}^{*}_{i,j}
+-\frac{1}{2}
+\begin{pmatrix}
+p_{i+1,j}-p_{i-1,j}\\
+p_{i,j+1}-p_{i,j-1}
+\end{pmatrix}.
+$$
+
+These operators intentionally omit a conversion to physical grid spacing. The projection is a visual divergence-reduction step and the fixed iteration count is not a convergence criterion.
+
+### Pigment transport
+
+Each pigment channel follows the projected velocity using the same backtrace. If the traced position lies inside a rock, the shader samples the current position instead. The sampled weights are sharpened and normalized:
+
+$$
+\widehat{c}_m=\max(c_m,10^{-5})^{1.035},
+\qquad
+c'_m=\frac{\widehat{c}_m}{\sum_{r=1}^{4}\widehat{c}_r}.
+$$
+
+Normalization keeps the four channels interpretable as relative palette weights. The exponent deliberately counteracts numerical blending and is not a material-mixing law.
+
+### Implicit rocks
+
+For a rock centered at $\mathbf{x}_c$, the fragment position is aspect-corrected and rotated into local coordinates. Its signed boundary estimate is
+
+$$
+\rho(\mathbf{x})=
+\left\|
+\frac{R(-\phi)\left((a(x-x_c),y-y_c)\right)}
+{(r_x,r_y)I(\theta)}
+\right\|-1,
+$$
+
+where $a$ is the canvas aspect ratio and the procedural silhouette perturbation is
+
+$$
+I(\theta)=1+0.065\sin(3\theta+2\pi s)+0.035\sin(5\theta-3\pi s/2).
+$$
+
+Velocity is cleared where $\rho<0$. Within a narrow exterior band, only inward motion is redirected using the approximate ellipse normal. This constraint is repeated after projection so the pressure pass cannot restore motion inside the rock. No momentum is transferred to the rock.
+
 ## Interaction
 
 Autonomous mode continuously injects a procedural force. Switching to zen-garden mode clears existing motion and applies stronger damping, allowing mouse gestures to become the dominant influence:
@@ -60,14 +158,17 @@ Left-dragging performs a CPU-side hit test against the ellipse and updates its c
 
 FlowGarden borrows numerical ideas associated with incompressible flow, but it deliberately omits the model, calibration, and validation required for physical interpretation:
 
-- Values have no physical units.
-- The procedural force is an artistic vector field, not a modeled external force.
-- The smoothing term is not a calibrated viscosity model.
-- Pressure iterations use a small fixed budget selected for real-time appearance.
-- Boundary handling is a visual damping rule rather than a validated material boundary condition.
-- Rock collisions are stylized local constraints, not a validated solid-fluid coupling method.
-- Pigment sharpening is a stylistic operation and does not model chemistry, diffusion, surface tension, or multiphase flow.
-- The implementation makes no conservation, convergence, or accuracy guarantees.
+| Operation | Numerical or artistic choice | Consequence |
+|---|---|---|
+| Velocity advection | Semi-Lagrangian backtrace | Stable and smooth for interactive use, but numerically dissipative |
+| Neighbor blend | Fixed screen-space smoothing | Improves visual continuity but is not calibrated viscosity |
+| Autonomous forcing | Analytic, time-varying vector field | Directs the composition rather than representing a measured force |
+| Pressure projection | Grid-scaled differences and a small fixed Jacobi budget | Reduces visible divergence without convergence or accuracy guarantees |
+| Canvas boundaries | Tapering and component clearing | Contains the artwork but is not a validated material boundary condition |
+| Pigment sharpening | Nonlinear channel adjustment and normalization | Preserves color regions but does not model chemistry, diffusion, surface tension, or multiphase flow |
+| Rock response | Local clearing and redirection | Suggests collision without a solid-fluid coupling model or momentum transfer |
+
+Field values and coefficients have no calibrated physical units and are selected by eye; wall-clock seconds only parameterize the animation. The implementation makes no conservation, convergence, stability-range, or accuracy guarantees.
 
 As a result, images and motion produced by FlowGarden should be described as generative fluid art or an artistic flow simulation, never as a prediction of real fluid or pigment behavior.
 
