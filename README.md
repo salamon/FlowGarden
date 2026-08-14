@@ -13,7 +13,7 @@ The application has no accounts, telemetry, analytics, cloud services, advertise
 
 [![Download FlowGarden for Windows x64](docs/assets/download-windows.svg)](https://github.com/salamon/FlowGarden/releases/latest/download/FlowGarden-windows-x64.zip)
 
-Download the ZIP, extract the complete `FlowGarden` folder, and run `FlowGarden.exe`. No Python installation is required. The executable is currently unsigned, so Windows SmartScreen may display a warning.
+Download the ZIP, extract the complete `FlowGarden` folder, and run `FlowGarden.exe`. Keep the `_internal` folder next to `FlowGarden.exe`; do not move the executable by itself. No Python installation is required. The executable is currently unsigned, so Windows SmartScreen may display a warning.
 
 Windows is the only verified platform and the only standalone package provided. The source uses a cross-platform stack and an OpenGL 4.1 renderer, but Linux and macOS have not yet been tested and are not claimed as supported.
 
