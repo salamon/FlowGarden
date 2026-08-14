@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use FlowGarden in an artwork, study, or teaching material, please cite the software using this metadata."
+title: "FlowGarden"
+type: software
+authors:
+  - family-names: "Salamon"
+    given-names: "Nestor Z."
+    orcid: "https://orcid.org/0000-0002-2923-8800"
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/salamon/FlowGarden"
+keywords:
+  - computer graphics
+  - generative art
+  - GLSL
+  - GPU rendering
+  - artistic simulation

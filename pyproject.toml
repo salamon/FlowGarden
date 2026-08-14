@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flowgarden"
+version = "0.1.0"
+description = "An offline, shader-driven fluid-art playground"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "Nestor Salamon" },
+]
+keywords = ["computer-graphics", "generative-art", "glsl", "moderngl", "opengl"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Science/Research",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Artistic Software",
+    "Topic :: Multimedia :: Graphics",
+]
+dependencies = [
+    "glfw>=2.7,<3",
+    "moderngl>=5.10,<6",
+]
+
+[project.scripts]
+flowgarden = "flowgarden.app:main"
+
+[project.urls]
+Homepage = "https://github.com/salamon/FlowGarden"
+Repository = "https://github.com/salamon/FlowGarden"
+Issues = "https://github.com/salamon/FlowGarden/issues"
+
+[tool.setuptools.package-data]
+flowgarden = ["shaders/*.frag", "shaders/*.vert"]
