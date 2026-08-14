@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import math
+import secrets
 import time
 from pathlib import Path
 
@@ -10,12 +11,21 @@ import moderngl
 
 
 SHADER_DIR = Path(__file__).with_name("shaders")
+PALETTE_NAMES = ("Garden", "Tidepool", "Ember", "Sakura", "Mineral")
 
 
 class FlowGarden:
     """Thin window/input shell around an artistic GPU flow simulation."""
 
-    def __init__(self, *, windowed: bool, scale: float, pressure_steps: int, hidden: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        windowed: bool,
+        scale: float,
+        pressure_steps: int,
+        palette: int = 0,
+        hidden: bool = False,
+    ) -> None:
         if not glfw.init():
             raise RuntimeError("GLFW could not initialize")
 
@@ -54,12 +64,13 @@ class FlowGarden:
 
         self.pressure_steps = max(4, pressure_steps)
         self.auto_mode = True
+        self.palette_index = palette % len(PALETTE_NAMES)
         self.brush_radius = 0.075
         self.mouse_uv = (0.5, 0.5)
         self.mouse_delta = [0.0, 0.0]
         self.left_down = False
         self.right_down = False
-        self.seed = time.time() % 1000.0
+        self.seed = self._new_seed()
         self._last_cursor: tuple[float, float] | None = None
         self._windowed_rect = (100, 100, min(1280, width), min(720, height))
         self._is_fullscreen = not windowed
@@ -72,7 +83,12 @@ class FlowGarden:
         self._build_programs()
         self._build_targets()
         self._install_callbacks()
+        self._update_window_title()
         self._reset_pigment()
+
+    @staticmethod
+    def _new_seed() -> float:
+        return secrets.randbelow(1_000_000) / 1000.0
 
     @staticmethod
     def _shader(name: str) -> str:
@@ -133,11 +149,25 @@ class FlowGarden:
             if not self.auto_mode:
                 self._clear_motion()
         elif key == glfw.KEY_R:
-            self.seed = (self.seed + 137.17) % 1000.0
-            self._clear_motion()
-            self._reset_pigment()
+            self._reseed()
+        elif key == glfw.KEY_P:
+            self._set_palette(self.palette_index + 1)
+        elif glfw.KEY_1 <= key <= glfw.KEY_5:
+            self._set_palette(key - glfw.KEY_1)
         elif key == glfw.KEY_F11:
             self._toggle_fullscreen()
+
+    def _update_window_title(self) -> None:
+        glfw.set_window_title(self.window, f"FlowGarden - {PALETTE_NAMES[self.palette_index]}")
+
+    def _set_palette(self, palette: int) -> None:
+        self.palette_index = palette % len(PALETTE_NAMES)
+        self._update_window_title()
+
+    def _reseed(self) -> None:
+        self.seed = self._new_seed()
+        self._clear_motion()
+        self._reset_pigment()
 
     def _on_cursor(self, _window, x: float, y: float) -> None:
         width, height = glfw.get_window_size(self.window)
@@ -296,6 +326,7 @@ class FlowGarden:
                 "u_mouse": self.mouse_uv,
                 "u_brush": self.brush_radius,
                 "u_mouse_kind": int(self.left_down or self.right_down),
+                "u_palette": self.palette_index,
             },
         )
 
@@ -342,6 +373,14 @@ def parse_args() -> argparse.Namespace:
         "--scale", type=float, default=0.55, help="simulation resolution relative to the screen (0.2-1.0)"
     )
     parser.add_argument("--pressure-steps", type=int, default=14, help="Jacobi pressure iterations per frame")
+    parser.add_argument(
+        "--palette",
+        type=int,
+        choices=range(1, len(PALETTE_NAMES) + 1),
+        default=1,
+        metavar="1-5",
+        help="initial color palette (1: Garden, 2: Tidepool, 3: Ember, 4: Sakura, 5: Mineral)",
+    )
     parser.add_argument("--smoke-test", action="store_true", help=argparse.SUPPRESS)
     return parser.parse_args()
 
@@ -352,6 +391,7 @@ def main() -> None:
         windowed=not args.fullscreen,
         scale=args.scale,
         pressure_steps=args.pressure_steps,
+        palette=args.palette - 1,
         hidden=args.smoke_test,
     )
     app.run(frame_limit=2 if args.smoke_test else None)

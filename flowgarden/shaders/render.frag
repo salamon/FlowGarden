@@ -11,6 +11,48 @@ uniform int u_auto;
 uniform vec2 u_mouse;
 uniform float u_brush;
 uniform int u_mouse_kind;
+uniform int u_palette;
+
+mat4 color_palette(int palette) {
+    if (palette == 1) {
+        return mat4(
+            vec4(0.04, 0.20, 0.48, 1.0),
+            vec4(0.06, 0.68, 0.78, 1.0),
+            vec4(0.34, 0.82, 0.68, 1.0),
+            vec4(0.94, 0.72, 0.38, 1.0)
+        );
+    }
+    if (palette == 2) {
+        return mat4(
+            vec4(0.14, 0.08, 0.12, 1.0),
+            vec4(0.72, 0.08, 0.16, 1.0),
+            vec4(0.96, 0.31, 0.08, 1.0),
+            vec4(1.00, 0.75, 0.18, 1.0)
+        );
+    }
+    if (palette == 3) {
+        return mat4(
+            vec4(0.24, 0.16, 0.46, 1.0),
+            vec4(0.73, 0.18, 0.50, 1.0),
+            vec4(0.96, 0.45, 0.62, 1.0),
+            vec4(1.00, 0.78, 0.72, 1.0)
+        );
+    }
+    if (palette == 4) {
+        return mat4(
+            vec4(0.05, 0.28, 0.26, 1.0),
+            vec4(0.10, 0.62, 0.55, 1.0),
+            vec4(0.78, 0.50, 0.10, 1.0),
+            vec4(0.62, 0.20, 0.15, 1.0)
+        );
+    }
+    return mat4(
+        vec4(0.075, 0.63, 0.57, 1.0),
+        vec4(0.95, 0.27, 0.31, 1.0),
+        vec4(0.96, 0.65, 0.12, 1.0),
+        vec4(0.43, 0.26, 0.76, 1.0)
+    );
+}
 
 float hash21(vec2 p) {
     p = fract(p * vec2(123.34, 456.21));
@@ -23,11 +65,12 @@ void main() {
     vec4 crisp = pow(w, vec4(7.0));
     crisp /= max(dot(crisp, vec4(1.0)), 0.0001);
 
-    const vec3 jade = vec3(0.075, 0.63, 0.57);
-    const vec3 coral = vec3(0.95, 0.27, 0.31);
-    const vec3 amber = vec3(0.96, 0.65, 0.12);
-    const vec3 violet = vec3(0.43, 0.26, 0.76);
-    vec3 color = jade * crisp.x + coral * crisp.y + amber * crisp.z + violet * crisp.w;
+    mat4 palette = color_palette(u_palette);
+    vec3 color =
+        palette[0].rgb * crisp.x +
+        palette[1].rgb * crisp.y +
+        palette[2].rgb * crisp.z +
+        palette[3].rgb * crisp.w;
 
     float strongest = max(max(w.x, w.y), max(w.z, w.w));
     vec4 remaining = w;

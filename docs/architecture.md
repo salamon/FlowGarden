@@ -30,7 +30,7 @@ Each displayed frame runs the following passes:
 3. **Pressure relaxation**: a configurable number of Jacobi-like iterations produces a pressure field.
 4. **Velocity projection**: the pressure gradient is subtracted from velocity to reduce visible divergence.
 5. **Pigment transport**: the four pigment weights are backtraced through the velocity field and sharpened to preserve distinct color regions.
-6. **Artistic rendering**: pigment weights are mapped to a fixed palette and combined with boundary shading, procedural grain, rake-like contours, velocity highlights, and a vignette.
+6. **Artistic rendering**: pigment weights are mapped to one of five selectable palettes and combined with boundary shading, procedural grain, rake-like contours, velocity highlights, and a vignette.
 
 The render passes are ordered by `flowgarden/app.py`; individual equations and style decisions live in `flowgarden/shaders/`.
 
@@ -43,6 +43,8 @@ Autonomous mode continuously injects a procedural force. Switching to zen-garden
 - The mouse wheel changes the spatial influence radius.
 
 The state exists only in GPU memory for the lifetime of the process.
+
+Re-seeding creates a new procedural starting arrangement and clears the velocity and pressure fields. Palette changes affect only the final color mapping, so they can be made without interrupting the current motion.
 
 ## Why this is not a physics simulation
 

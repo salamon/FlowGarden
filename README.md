@@ -17,7 +17,7 @@ FlowGarden is preparing its first public source release. Windows is the currentl
 
 - Real-time GPU rendering with Python, ModernGL, GLFW, and GLSL.
 - Autonomous motion and a paused zen-garden interaction mode.
-- Four stylized, immiscible-looking pigment fields.
+- Four stylized, immiscible-looking pigment fields with five color palettes.
 - Fullscreen support on the monitor containing the window.
 - A deliberately small codebase designed to be read, modified, and forked.
 - Fully offline execution with no data collection.
@@ -73,15 +73,29 @@ python -m flowgarden --scale 0.4
 | Left-drag | Push and comb the pigment fields |
 | Right-drag or hold | Create a local swirl |
 | Mouse wheel | Adjust the brush radius |
-| `R` | Generate a new composition |
+| `R` | Re-seed and restart the composition |
+| `P` | Cycle to the next color palette |
+| `1`–`5` | Select Garden, Tidepool, Ember, Sakura, or Mineral directly |
 | `F11` | Toggle fullscreen on the current monitor |
 | `Esc` | Quit |
+
+## Color palettes
+
+- **Garden**: the original jade, coral, amber, and violet identity.
+- **Tidepool**: deep blue, cyan, seafoam, and warm sand.
+- **Ember**: charcoal, crimson, orange, and gold.
+- **Sakura**: indigo, magenta, pink, and pale blossom tones.
+- **Mineral**: forest green, turquoise, ochre, and clay.
+
+Changing palettes remaps the current pigment fields without resetting their motion. Press `P` to cycle or use `1`–`5` for direct selection.
 
 ## How it works
 
 Python is responsible only for the window, input, GPU resources, and render-pass orchestration. Advection, procedural forcing, divergence, pressure relaxation, velocity projection, pigment-field transport, and final styling run in GLSL fragment shaders.
 
 The implementation favors responsive and aesthetically interesting motion over physical correctness. For pass-by-pass details and the model's limitations, read [Architecture and artistic model](docs/architecture.md).
+
+The initial palette can also be selected from the command line with `--palette 1-5`.
 
 ## Project structure
 
