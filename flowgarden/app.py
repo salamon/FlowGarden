@@ -15,6 +15,93 @@ import moderngl
 SHADER_DIR = Path(__file__).with_name("shaders")
 PALETTE_NAMES = ("Garden", "Tidepool", "Ember", "Sakura", "Mineral")
 MAX_ROCKS = 8
+HELP_LINES = (
+    "FLOWGARDEN HELP",
+    "",
+    "SPACE       AUTO / ZEN MODE",
+    "LEFT DRAG   COMB / MOVE ROCK",
+    "RIGHT DRAG  SWIRL",
+    "WHEEL       BRUSH SIZE",
+    "R           RE-SEED",
+    "P           NEXT PALETTE",
+    "1-5         SELECT PALETTE",
+    "S           ADD ROCK",
+    "SHIFT S     CLEAR ROCKS",
+    "F11         FULLSCREEN",
+    "H           CLOSE HELP",
+    "ESC         QUIT",
+)
+
+# Seven rows of five pixels keep the help self-contained and deterministic.
+FONT_5X7 = {
+    " ": ("00000",) * 7,
+    "-": ("00000", "00000", "00000", "11111", "00000", "00000", "00000"),
+    "/": ("00001", "00010", "00100", "01000", "10000", "00000", "00000"),
+    "0": ("01110", "10001", "10011", "10101", "11001", "10001", "01110"),
+    "1": ("00100", "01100", "00100", "00100", "00100", "00100", "01110"),
+    "2": ("01110", "10001", "00001", "00010", "00100", "01000", "11111"),
+    "3": ("11110", "00001", "00001", "01110", "00001", "00001", "11110"),
+    "4": ("00010", "00110", "01010", "10010", "11111", "00010", "00010"),
+    "5": ("11111", "10000", "10000", "11110", "00001", "00001", "11110"),
+    "6": ("01110", "10000", "10000", "11110", "10001", "10001", "01110"),
+    "7": ("11111", "00001", "00010", "00100", "01000", "01000", "01000"),
+    "8": ("01110", "10001", "10001", "01110", "10001", "10001", "01110"),
+    "9": ("01110", "10001", "10001", "01111", "00001", "00001", "01110"),
+    "A": ("01110", "10001", "10001", "11111", "10001", "10001", "10001"),
+    "B": ("11110", "10001", "10001", "11110", "10001", "10001", "11110"),
+    "C": ("01111", "10000", "10000", "10000", "10000", "10000", "01111"),
+    "D": ("11110", "10001", "10001", "10001", "10001", "10001", "11110"),
+    "E": ("11111", "10000", "10000", "11110", "10000", "10000", "11111"),
+    "F": ("11111", "10000", "10000", "11110", "10000", "10000", "10000"),
+    "G": ("01111", "10000", "10000", "10111", "10001", "10001", "01111"),
+    "H": ("10001", "10001", "10001", "11111", "10001", "10001", "10001"),
+    "I": ("11111", "00100", "00100", "00100", "00100", "00100", "11111"),
+    "J": ("00111", "00010", "00010", "00010", "10010", "10010", "01100"),
+    "K": ("10001", "10010", "10100", "11000", "10100", "10010", "10001"),
+    "L": ("10000", "10000", "10000", "10000", "10000", "10000", "11111"),
+    "M": ("10001", "11011", "10101", "10101", "10001", "10001", "10001"),
+    "N": ("10001", "11001", "10101", "10011", "10001", "10001", "10001"),
+    "O": ("01110", "10001", "10001", "10001", "10001", "10001", "01110"),
+    "P": ("11110", "10001", "10001", "11110", "10000", "10000", "10000"),
+    "Q": ("01110", "10001", "10001", "10001", "10101", "10010", "01101"),
+    "R": ("11110", "10001", "10001", "11110", "10100", "10010", "10001"),
+    "S": ("01111", "10000", "10000", "01110", "00001", "00001", "11110"),
+    "T": ("11111", "00100", "00100", "00100", "00100", "00100", "00100"),
+    "U": ("10001", "10001", "10001", "10001", "10001", "10001", "01110"),
+    "V": ("10001", "10001", "10001", "10001", "10001", "01010", "00100"),
+    "W": ("10001", "10001", "10001", "10101", "10101", "10101", "01010"),
+    "X": ("10001", "10001", "01010", "00100", "01010", "10001", "10001"),
+    "Y": ("10001", "10001", "01010", "00100", "00100", "00100", "00100"),
+    "Z": ("11111", "00001", "00010", "00100", "01000", "10000", "11111"),
+}
+
+
+def build_help_bitmap(scale: int = 2, padding: int = 12) -> tuple[tuple[int, int], bytes]:
+    """Rasterize the static help without fonts, assets, or UI dependencies."""
+    glyph_width, glyph_height = 5, 7
+    advance_x, advance_y = glyph_width + 1, glyph_height + 2
+    text_width = max(len(line) for line in HELP_LINES) * advance_x - 1
+    text_height = len(HELP_LINES) * advance_y - 2
+    width = text_width * scale + padding * 2
+    height = text_height * scale + padding * 2
+    pixels = bytearray(width * height)
+
+    for line_index, line in enumerate(HELP_LINES):
+        for character_index, character in enumerate(line):
+            glyph = FONT_5X7[character]
+            origin_x = padding + character_index * advance_x * scale
+            origin_y = padding + line_index * advance_y * scale
+            for row_index, row in enumerate(glyph):
+                for column_index, value in enumerate(row):
+                    if value == "0":
+                        continue
+                    pixel_x = origin_x + column_index * scale
+                    pixel_y = origin_y + row_index * scale
+                    for offset_y in range(scale):
+                        start = (pixel_y + offset_y) * width + pixel_x
+                        pixels[start : start + scale] = b"\xff" * scale
+
+    return (width, height), bytes(pixels)
 
 
 @dataclass
@@ -80,6 +167,7 @@ class FlowGarden:
 
         self.pressure_steps = max(4, pressure_steps)
         self.auto_mode = True
+        self.help_visible = False
         self.palette_index = palette % len(PALETTE_NAMES)
         self.brush_radius = 0.075
         self.mouse_uv = (0.5, 0.5)
@@ -102,6 +190,7 @@ class FlowGarden:
 
         self._build_programs()
         self._build_targets()
+        self._build_help_texture()
         self._install_callbacks()
         self._update_window_title()
         self._reset_pigment()
@@ -135,7 +224,7 @@ class FlowGarden:
             "pressure": ("u_pressure", "u_divergence"),
             "project": ("u_velocity", "u_pressure"),
             "pigment": ("u_pigment", "u_velocity"),
-            "render": ("u_pigment", "u_velocity"),
+            "render": ("u_pigment", "u_velocity", "u_help_mask"),
         }
         for name, uniform_names in texture_uniforms.items():
             for unit, uniform_name in enumerate(uniform_names):
@@ -163,6 +252,13 @@ class FlowGarden:
         self.velocity_fbo[1].clear()
         self.pressure_fbo[0].clear()
         self.pressure_fbo[1].clear()
+
+    def _build_help_texture(self) -> None:
+        size, pixels = build_help_bitmap()
+        self.help_texture = self.ctx.texture(size, 1, data=pixels, dtype="f1")
+        self.help_texture.filter = (moderngl.LINEAR, moderngl.LINEAR)
+        self.help_texture.repeat_x = False
+        self.help_texture.repeat_y = False
 
     def _install_callbacks(self) -> None:
         glfw.set_key_callback(self.window, self._on_key)
@@ -192,6 +288,8 @@ class FlowGarden:
             self._set_palette(key - glfw.KEY_1)
         elif key == glfw.KEY_F11:
             self._toggle_fullscreen()
+        elif key == glfw.KEY_H:
+            self.help_visible = not self.help_visible
 
     def _update_window_title(self) -> None:
         rock_count = len(self.rocks)
@@ -442,14 +540,20 @@ class FlowGarden:
         self.mouse_delta[:] = (0.0, 0.0)
 
     def _render(self, elapsed: float, target: moderngl.Framebuffer | None = None) -> None:
+        if target is None:
+            view_width, view_height = glfw.get_framebuffer_size(self.window)
+        else:
+            view_width, view_height = target.size
         self._draw(
             "render",
             target,
-            (self.pigment[0], self.velocity[0]),
+            (self.pigment[0], self.velocity[0], self.help_texture),
             {
                 "u_time": elapsed,
                 "u_aspect": self.sim_size[0] / self.sim_size[1],
+                "u_view_aspect": view_width / max(view_height, 1),
                 "u_auto": int(self.auto_mode),
+                "u_help": int(self.help_visible),
                 "u_mouse": self.mouse_uv,
                 "u_brush": self.brush_radius,
                 "u_mouse_kind": int(self.left_down or self.right_down),
@@ -486,6 +590,7 @@ class FlowGarden:
                 if frame_limit is not None and frame == 1:
                     self._add_random_rock()
                     self.auto_mode = False
+                    self._on_key(self.window, glfw.KEY_H, 0, glfw.PRESS, 0)
                     self._clear_motion()
                     self.left_down = True
                     self.mouse_uv = (0.25, 0.25)

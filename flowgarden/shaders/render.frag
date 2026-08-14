@@ -4,10 +4,13 @@ in vec2 v_uv;
 layout(location = 0) out vec4 out_color;
 uniform sampler2D u_pigment;
 uniform sampler2D u_velocity;
+uniform sampler2D u_help_mask;
 
 uniform float u_time;
 uniform float u_aspect;
+uniform float u_view_aspect;
 uniform int u_auto;
+uniform int u_help;
 uniform vec2 u_mouse;
 uniform float u_brush;
 uniform int u_mouse_kind;
@@ -81,6 +84,11 @@ float hash21(vec2 p) {
     p = fract(p * vec2(123.34, 456.21));
     p += dot(p, p + 45.32);
     return fract(p.x * p.y);
+}
+
+float rounded_box_distance(vec2 point, vec2 half_size, float radius) {
+    vec2 offset = abs(point) - half_size + radius;
+    return min(max(offset.x, offset.y), 0.0) + length(max(offset, 0.0)) - radius;
 }
 
 void main() {
@@ -159,5 +167,32 @@ void main() {
     }
 
     color = pow(max(color, vec3(0.0)), vec3(0.92));
+
+    if (u_help != 0) {
+        vec2 help_size = vec2(textureSize(u_help_mask, 0));
+        float help_aspect = help_size.x / help_size.y;
+        vec2 panel_size = vec2(0.0, 0.82);
+        panel_size.x = panel_size.y * help_aspect / u_view_aspect;
+        if (panel_size.x > 0.90) {
+            panel_size *= 0.90 / panel_size.x;
+        }
+
+        vec2 physical_point = (v_uv - 0.5) * vec2(u_view_aspect, 1.0);
+        vec2 physical_half_size = panel_size * vec2(u_view_aspect, 1.0) * 0.5;
+        float panel_distance = rounded_box_distance(physical_point, physical_half_size, 0.025);
+        float panel_mask = 1.0 - smoothstep(0.0, 0.003, panel_distance);
+        float border_mask = (1.0 - smoothstep(0.0, 0.003, abs(panel_distance))) * panel_mask;
+        color = mix(color, vec3(0.018, 0.026, 0.024), panel_mask * 0.82);
+        color = mix(color, vec3(0.50, 0.62, 0.57), border_mask * 0.38);
+
+        vec2 panel_min = vec2(0.5) - panel_size * 0.5;
+        vec2 panel_uv = (v_uv - panel_min) / panel_size;
+        if (all(greaterThanEqual(panel_uv, vec2(0.0))) && all(lessThanEqual(panel_uv, vec2(1.0)))) {
+            float text_mask = texture(u_help_mask, vec2(panel_uv.x, 1.0 - panel_uv.y)).r;
+            text_mask = smoothstep(0.12, 0.72, text_mask) * panel_mask;
+            color = mix(color, vec3(0.90, 0.95, 0.91), text_mask * 0.96);
+        }
+    }
+
     out_color = vec4(color, 1.0);
 }

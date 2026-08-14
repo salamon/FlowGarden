@@ -7,11 +7,15 @@ FlowGarden is an offline, shader-driven visual playground inspired by fluid moti
 > [!IMPORTANT]
 > FlowGarden is an artistic simulation, not a physics simulation. Its numerical passes are inspired by real-time incompressible-flow techniques, but they are deliberately tuned for visual behavior. The output must not be interpreted as a physically accurate model of fluids, viscosity, pigments, pressure, material mixing, or solid-fluid interaction.
 
-The application has no accounts, telemetry, analytics, cloud services, advertisements, or automatic update checks. Once downloaded and installed, it runs entirely on the local computer. See [Privacy](PRIVACY.md) for the complete offline guarantee.
+The application has no accounts, telemetry, analytics, cloud services, advertisements, or automatic update checks. Once downloaded and extracted, it runs entirely on the local computer. See [Privacy](PRIVACY.md) for the complete offline guarantee.
 
-## Current status
+## Download for Windows
 
-FlowGarden is preparing its first public release. Windows is the only currently verified platform and will be the target of the first standalone package. The source uses a cross-platform stack and an OpenGL 4.1 renderer, but Linux and macOS have not yet been tested and are not claimed as supported.
+[![Download FlowGarden for Windows x64](docs/assets/download-windows.svg)](https://github.com/salamon/FlowGarden/releases/latest/download/FlowGarden-windows-x64.zip)
+
+Download the ZIP, extract the complete `FlowGarden` folder, and run `FlowGarden.exe`. No Python installation is required. The executable is currently unsigned, so Windows SmartScreen may display a warning.
+
+Windows is the only verified platform and the only standalone package provided. The source uses a cross-platform stack and an OpenGL 4.1 renderer, but Linux and macOS have not yet been tested and are not claimed as supported.
 
 ## Highlights
 
@@ -94,6 +98,7 @@ python -m flowgarden --scale 0.4
 | `S` | Add a randomized rock, up to eight |
 | `Shift+S` | Remove all rocks |
 | `F11` | Toggle fullscreen on the current monitor without auto-minimizing on focus loss |
+| `H` | Toggle the translucent on-screen help |
 | `Esc` | Quit |
 
 ## Color palettes

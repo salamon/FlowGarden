@@ -144,6 +144,8 @@ The state exists only in GPU memory for the lifetime of the process.
 
 Re-seeding creates a new procedural starting arrangement and clears the velocity and pressure fields. Palette changes affect only the final color mapping, so they can be made without interrupting the current motion.
 
+The on-screen help is a static 5×7 bitmap generated in memory by the Python host and composited as a translucent panel in the final shader. It does not load a system font, UI toolkit, or external asset.
+
 Fullscreen uses the selected monitor's current video mode with GLFW auto-iconification disabled. This keeps the composition fullscreen on a secondary monitor when another application receives focus on the primary monitor. The window is not floating or always-on-top.
 
 ## Rocks and obstacle response
