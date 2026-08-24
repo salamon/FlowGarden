@@ -138,14 +138,6 @@ FlowGarden/
 
 FlowGarden intentionally has no runtime plugin manager or online extension marketplace. The MIT-licensed source and separate shader passes are meant to make experiments and forks straightforward. Contributions that preserve the offline, transparent, and artistically focused nature of the project are welcome; see [Contributing](CONTRIBUTING.md).
 
-## Author and academic context
-
-FlowGarden is created and maintained by [Nestor Z. Salamon](https://salamon.me/), who holds a PhD in Computer Graphics from Delft University of Technology. His academic work spans computational photography, creative image and video editing, and interactive visual tools. This repository is an independent, living continuation of that graphics practice through small, inspectable experiments in real-time rendering.
-
-Research background and publications are available on [Nestor's project archive](https://salamon.me/labs/), [ORCID](https://orcid.org/0000-0002-2923-8800), and [DBLP](https://dblp.org/pid/156/7142.html).
-
-If FlowGarden is used in an artwork, study, publication, or teaching material, please cite the software using [CITATION.cff](CITATION.cff). FlowGarden is an artistic software project, not a peer-reviewed fluid model.
-
 ## License
 
 FlowGarden is released under the [MIT License](LICENSE).
