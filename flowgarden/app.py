@@ -165,7 +165,7 @@ class FlowGarden:
         self.ctx.disable(moderngl.DEPTH_TEST)
         self.ctx.disable(moderngl.BLEND)
 
-        self.pressure_steps = max(4, pressure_steps)
+        self.pressure_steps = max(4, min(pressure_steps, 64))
         self.auto_mode = True
         self.help_visible = False
         self.palette_index = palette % len(PALETTE_NAMES)
@@ -606,7 +606,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--scale", type=float, default=0.55, help="simulation resolution relative to the screen (0.2-1.0)"
     )
-    parser.add_argument("--pressure-steps", type=int, default=14, help="Jacobi pressure iterations per frame")
+    parser.add_argument(
+        "--pressure-steps", type=int, default=14, help="Jacobi pressure iterations per frame (4-64)"
+    )
     parser.add_argument(
         "--palette",
         type=int,
