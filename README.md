@@ -1,6 +1,6 @@
 # FlowGarden
 
-![FlowGarden composition](docs/assets/flowgarden.png)
+![Animated FlowGarden composition flowing around three stones](docs/assets/flowgarden.gif)
 
 FlowGarden is an offline, shader-driven visual playground inspired by fluid motion and *karesansui*, the Japanese tradition of dry landscape gardens. It can unfold on its own as a continuously evolving composition or become a hands-on zen-garden canvas, where colorful fields are combed around stones with the mouse.
 
